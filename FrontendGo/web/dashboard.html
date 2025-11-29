@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - RuraGo</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1>🚗 RuraGo</h1>
+            <div class="nav-user">
+                <span id="userName"></span>
+                <button onclick="logout()" class="btn-logout">Salir</button>
+            </div>
+        </div>
+    </nav>
+    
+    <div class="dashboard-container">
+        <div class="welcome-section">
+            <h2>Bienvenido al Atlántico Rural</h2>
+            <p>¿Qué deseas hacer hoy?</p>
+        </div>
+        
+        <div class="actions-grid">
+            <!-- Publicar Viaje (SOLO conductores y ambos) -->
+            <div class="action-card" id="cardPublicar">
+                <div class="card-icon">📍</div>
+                <h3>Publicar Viaje</h3>
+                <p>Ofrece transporte compartido</p>
+                <button onclick="showPublicarViaje()" class="btn-action">Publicar</button>
+            </div>
+            
+            <!-- Buscar Viajes (SOLO pasajeros y ambos) -->
+            <div class="action-card" id="cardBuscar">
+                <div class="card-icon">🔍</div>
+                <h3>Buscar Viajes</h3>
+                <p>Encuentra tu ruta</p>
+                <button onclick="window.location.href='viajes.html'" class="btn-action">Buscar</button>
+            </div>
+            
+            <!-- Mis Viajes (TODOS) -->
+            <div class="action-card">
+                <div class="card-icon">🗂️</div>
+                <h3>Mis Viajes</h3>
+                <p>Historial y reservas</p>
+                <button onclick="window.location.href='mis-viajes.html'" class="btn-action">Ver Historial</button>
+            </div>
+        </div>
+        
+        <!-- FORM PUBLICAR VIAJE (Oculto inicialmente) -->
+        <div id="formPublicar" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <h2>Publicar Nuevo Viaje</h2>
+                <form id="publicarForm">
+                    <div class="input-group">
+                        <label>Origen</label>
+                        <input type="text" id="origen" placeholder="Ej: Barranquilla" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Destino</label>
+                        <input type="text" id="destino" placeholder="Ej: Sabanalarga" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Fecha</label>
+                        <input type="date" id="fecha" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Asientos disponibles</label>
+                        <input type="number" id="asientos" min="1" max="7" value="4" required>
+                    </div>
+                    <div class="input-group">
+                        <label>Precio por persona (COP)</label>
+                        <input type="number" id="precio" placeholder="25000" step="1000" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Publicar Viaje</button>
+                </form>
+                <div id="modalMessage" class="message"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/app.js"></script>
+    <script>
+        // Esperar a que cargue el DOM
+        window.addEventListener('DOMContentLoaded', function() {
+            // Verificar autenticación
+            const usuario = JSON.parse(localStorage.getItem('usuario'));
+            if (!usuario) {
+                window.location.href = 'index.html';
+                return;
+            }
+            
+            document.getElementById('userName').textContent = usuario.nombre;
+            
+            // Mostrar/ocultar según tipo de usuario
+            const tipo = (usuario.tipo || '').toLowerCase().trim();
+            
+            console.log('Usuario:', usuario.nombre, '| Tipo:', tipo);
+            
+            if (tipo === 'pasajero') {
+                const cardPublicar = document.getElementById('cardPublicar');
+                console.log('Buscando cardPublicar:', cardPublicar);
+                if (cardPublicar) {
+                    cardPublicar.style.display = 'none';
+                    console.log('✅ Ocultando "Publicar Viaje" para pasajero');
+                }
+            } else if (tipo === 'conductor') {
+                const cardBuscar = document.getElementById('cardBuscar');
+                console.log('Buscando cardBuscar:', cardBuscar);
+                if (cardBuscar) {
+                    cardBuscar.style.display = 'none';
+                    console.log('✅ Ocultando "Buscar Viajes" para conductor');
+                }
+            }
+        });
+        
+        function showPublicarViaje() {
+            document.getElementById('formPublicar').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('formPublicar').style.display = 'none';
+        }
+        
+        // Publicar viaje
+        document.getElementById('publicarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const usuario = JSON.parse(localStorage.getItem('usuario'));
+            
+            const data = {
+                conductor_id: usuario.id,
+                origen: document.getElementById('origen').value,
+                destino: document.getElementById('destino').value,
+                fecha: document.getElementById('fecha').value,
+                asientos: document.getElementById('asientos').value,
+                precio: document.getElementById('precio').value
+            };
+            
+            const result = await publicarViaje(data);
+            
+            const msg = document.getElementById('modalMessage');
+            if (result.success) {
+                msg.textContent = '¡Viaje publicado exitosamente!';
+                msg.className = 'message success';
+                setTimeout(() => {
+                    closeModal();
+                    e.target.reset();
+                }, 2000);
+            } else {
+                msg.textContent = result.mensaje;
+                msg.className = 'message error';
+            }
+        });
+        
+        function logout() {
+            localStorage.removeItem('usuario');
+            window.location.href = 'index.html';
+        }
+    </script>
+
+</body>
+</html>
+

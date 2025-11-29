@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rutas Disponibles - RuraGo</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1>🚗 RuraGo</h1>
+            <button onclick="window.location.href='dashboard.html'" class="btn-back">← Volver</button>
+        </div>
+    </nav>
+    
+    <div class="dashboard-container">
+        <div class="welcome-section">
+            <h2>Rutas Disponibles</h2>
+            <p>Selecciona una ruta y reserva tu cupo</p>
+        </div>
+        
+        <form id="buscarForm" class="search-form">
+            <input type="text" id="searchOrigen" placeholder="📍 Punto de inicio (Ej: Barranquilla)">
+            <input type="text" id="searchDestino" placeholder="📍 Destino (Ej: Sabanalarga)">
+            <button type="submit" class="btn-primary">Buscar Rutas</button>
+        </form>
+        
+        <div id="resultados" class="resultados"></div>
+        
+        <!-- Modal Reserva -->
+        <div id="reservaModal" class="modal" style="display:none;">
+            <div class="modal-content">
+                <span class="close" onclick="closeReservaModal()">&times;</span>
+                <h3>Reservar Cupo</h3>
+                <p style="color:#7f8c8d; margin-bottom:1.5rem;">Completa la información para apartar tu cupo</p>
+                <form id="reservarForm">
+                    <input type="hidden" id="reservaViajeId">
+                    <input type="hidden" id="reservaPrecio">
+                    
+                    <div class="input-group">
+                        <label>Cantidad de cupos</label>
+                        <input type="number" id="reservaAsientos" min="1" required>
+                    </div>
+                    
+                    <div class="input-group">
+                        <label>Método de pago</label>
+                        <select id="reservaMetodo" required>
+                            <option value="">Selecciona...</option>
+                            <option value="Nequi">Nequi</option>
+                            <option value="Daviplata">Daviplata</option>
+                            <option value="Efectivo">Efectivo</option>
+                            <option value="Transferencia">Transferencia</option>
+                        </select>
+                    </div>
+                    
+                    <div id="totalMonto" style="background:#ecf0f1; padding:1rem; border-radius:10px; margin:1rem 0;">
+                        <strong>Total a pagar:</strong> <span id="montoTotal" style="color:#11998e; font-size:1.5rem; font-weight:700;">$0 COP</span>
+                    </div>
+                    
+                    <button type="submit" class="btn-primary">Confirmar Reserva</button>
+                </form>
+                <div id="reservaMsg" class="message"></div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="js/app.js"></script>
+    <script>
+        const usuario = JSON.parse(localStorage.getItem('usuario'));
+        if (!usuario) window.location.href = 'index.html';
+        
+        // Buscar viajes al cargar
+        window.onload = async () => {
+            const data = await buscarViajes('', '');
+            mostrarResultados(data.viajes || []);
+        };
+        
+        // Buscar viajes con filtros
+        document.getElementById('buscarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const origen = document.getElementById('searchOrigen').value;
+            const destino = document.getElementById('searchDestino').value;
+            const data = await buscarViajes(origen, destino);
+            mostrarResultados(data.viajes || []);
+        });
+        
+        function mostrarResultados(viajes) {
+            const contenedor = document.getElementById('resultados');
+            contenedor.innerHTML = '';
+            
+            if (viajes.length === 0) {
+                contenedor.innerHTML = '<p style="text-align:center; color:#95a5a6; font-size:1.2rem;">No se encontraron rutas disponibles 😔</p>';
+                return;
+            }
+            
+            viajes.forEach(v => {
+                let badge = 'Disponible';
+                let badgeClass = '';
+                
+                if (v.asientos === 1) {
+                    badge = 'Último cupo';
+                    badgeClass = 'ultimo';
+                } else if (v.asientos === 0) {
+                    badge = 'Lleno';
+                    badgeClass = 'lleno';
+                }
+                
+                const card = document.createElement('div');
+                card.className = 'viaje-card';
+                card.innerHTML = `
+                    <div class="badge ${badgeClass}">${badge}</div>
+                    
+                    <div class="route-info">
+                        <div class="route-point">
+                            <div class="route-icon start">A</div>
+                            <div class="route-text">
+                                <small>Punto de Inicio</small>
+                                <strong>${v.origen}</strong>
+                            </div>
+                        </div>
+                        <div style="color:#95a5a6;">→</div>
+                        <div class="route-point">
+                            <div class="route-icon end">B</div>
+                            <div class="route-text">
+                                <small>Punto de Fin</small>
+                                <strong>${v.destino}</strong>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="viaje-details">
+                        <div class="detail-item">
+                            <label>Conductor</label>
+                            <span>${v.conductor_nombre || 'Conductor #' + v.conductor_id}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Hora de salida</label>
+                            <span>${v.fecha}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Cupos</label>
+                            <span>${v.asientos}/4</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Precio</label>
+                            <span class="price">$${Number(v.precio).toLocaleString()} COP</span>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        onclick="openReservaModal(${v.id}, ${v.precio}, ${v.asientos})" 
+                        class="btn-action" 
+                        style="width:100%; margin-top:1rem;"
+                        ${v.asientos === 0 ? 'disabled' : ''}>
+                        ${v.asientos === 0 ? 'Sin Cupos' : 'Apartar Cupo'}
+                    </button>
+                `;
+                contenedor.appendChild(card);
+            });
+        }
+        
+        // Modal Reservar
+        function openReservaModal(viajeId, precio, maxAsientos) {
+            document.getElementById('reservaModal').style.display = 'flex';
+            document.getElementById('reservaViajeId').value = viajeId;
+            document.getElementById('reservaPrecio').value = precio;
+            document.getElementById('reservaAsientos').max = maxAsientos;
+            document.getElementById('reservaAsientos').value = 1;
+            actualizarTotal();
+        }
+        
+        function closeReservaModal() {
+            document.getElementById('reservaModal').style.display = 'none';
+            document.getElementById('reservaMsg').className = 'message';
+        }
+        
+        // Actualizar total al cambiar asientos
+        document.getElementById('reservaAsientos').addEventListener('input', actualizarTotal);
+        
+        function actualizarTotal() {
+            const asientos = Number(document.getElementById('reservaAsientos').value) || 0;
+            const precio = Number(document.getElementById('reservaPrecio').value) || 0;
+            const total = asientos * precio;
+            document.getElementById('montoTotal').textContent = '$' + total.toLocaleString() + ' COP';
+        }
+        
+        // Reservar viaje
+        document.getElementById('reservarForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const viajeId = document.getElementById('reservaViajeId').value;
+            const asientos = Number(document.getElementById('reservaAsientos').value);
+            const metodoPago = document.getElementById('reservaMetodo').value;
+            const precio = Number(document.getElementById('reservaPrecio').value);
+            const monto = asientos * precio;
+            
+            const reserva = await reservarViaje(viajeId, usuario.id, asientos, monto);
+            
+            if (reserva.success) {
+                const pago = await procesarPago(viajeId, usuario.id, monto, metodoPago);
+                
+                const msg = document.getElementById('reservaMsg');
+                if (pago.success) {
+                    msg.textContent = '✅ ¡Reserva completada y pago exitoso!';
+                    msg.className = 'message success';
+                    setTimeout(() => {
+                        closeReservaModal();
+                        location.reload();
+                    }, 2500);
+                } else {
+                    msg.textContent = '❌ ' + (pago.mensaje || 'Error en el pago');
+                    msg.className = 'message error';
+                }
+            } else {
+                const msg = document.getElementById('reservaMsg');
+                msg.textContent = '❌ ' + (reserva.mensaje || 'Error en la reserva');
+                msg.className = 'message error';
+            }
+        });
+    </script>
+</body>
+</html>
