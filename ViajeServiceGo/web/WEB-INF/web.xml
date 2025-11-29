@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app version="3.1" xmlns="http://xmlns.jcp.org/xml/ns/javaee" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd">
+    
+    <servlet>
+        <servlet-name>PublicarViajeServlet</servlet-name>
+        <servlet-class>controlador.PublicarViajeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>PublicarViajeServlet</servlet-name>
+        <url-pattern>/publicar-viaje</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>BuscarViajeServlet</servlet-name>
+        <servlet-class>controlador.BuscarViajeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>BuscarViajeServlet</servlet-name>
+        <url-pattern>/buscar-viajes</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>ReservarViajeServlet</servlet-name>
+        <servlet-class>controlador.ReservarViajeServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ReservarViajeServlet</servlet-name>
+        <url-pattern>/reservar-viaje</url-pattern>
+    </servlet-mapping>
+    
+    <servlet>
+        <servlet-name>ObtenerReservasServlet</servlet-name>
+        <servlet-class>controlador.ObtenerReservasServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ObtenerReservasServlet</servlet-name>
+        <url-pattern>/obtener-reservas</url-pattern>
+    </servlet-mapping>
+    
+    <session-config>
+        <session-timeout>30</session-timeout>
+    </session-config>
+</web-app>
